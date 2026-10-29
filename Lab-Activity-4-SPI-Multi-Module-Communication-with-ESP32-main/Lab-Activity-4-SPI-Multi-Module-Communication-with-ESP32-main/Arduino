@@ -1,0 +1,86 @@
+#include <SPI.h>
+#include <MFRC522.h>
+#include <MD_MAX72xx.h>
+
+// ===== MAX7219 LED MATRIX SETTINGS =====
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define MAX_DEVICES 1
+#define MATRIX_CS 15
+
+// ===== RFID SETTINGS =====
+#define SS_RFID 5
+#define RST_PIN 22
+
+// Create objects
+MD_MAX72XX matrix = MD_MAX72XX(HARDWARE_TYPE, MATRIX_CS, MAX_DEVICES);
+MFRC522 rfid(SS_RFID, RST_PIN);
+
+// Counter for SPI operations
+int operationCount = 0;
+
+void setup() {
+
+  Serial.begin(115200);
+  delay(3000);
+
+  // Start SPI
+  SPI.begin();
+
+  // Initialize RFID
+  rfid.PCD_Init();
+  Serial.println("RFID Module Initialized");
+
+  // Initialize LED Matrix
+  matrix.begin();
+  matrix.clear();
+  matrix.control(MD_MAX72XX::INTENSITY, 5);
+  Serial.println("MAX7219 Matrix Initialized");
+
+  Serial.println("SPI Multi-Module System Ready");
+  Serial.println("----------------------------------");
+  Serial.println();
+}
+
+void loop() {
+
+  operationCount++;
+
+  Serial.print("SPI Operation #");
+  Serial.println(operationCount);
+
+  // ===== MATRIX OPERATION =====
+  Serial.println("Matrix: Displaying Test Pattern");
+
+  for (int row = 0; row < 8; row++) {
+    matrix.setRow(0, row, 0xFF);
+    delay(80);
+  }
+
+  delay(300);
+  matrix.clear();
+
+  // ===== RFID OPERATION =====
+  Serial.println("RFID: Checking for card...");
+
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+
+    Serial.print("Card UID: ");
+
+    for (byte i = 0; i < rfid.uid.size; i++) {
+      Serial.print(rfid.uid.uidByte[i], HEX);
+      Serial.print(" ");
+    }
+
+    Serial.println();
+    Serial.println("RFID Card Detected!");
+
+    rfid.PICC_HaltA();
+  }
+  else {
+    Serial.println("No RFID card detected");
+  }
+
+  Serial.println("----------------------------------");
+
+  delay(2000);
+}
